@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speed Test, Uptime and Downtime Results</title>
+    <link rel="stylesheet" href="styles.css"> <!-- Link the CSS file -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Speed Test Results</h1>
+    <button id="toggleMode">Switch to Light Mode</button>
+    <form action="index.html">
+        <input  type="submit" value="MAIN PAGE" />
+    </form>
+    <table id="speedtest">
+        <thead>
+            <tr>
+                <th>download (mb)</th>
+                <th>upload (mb)</th>
+                <th>location</th>
+                <th>id</th>
+                <th>name</th>
+                <th>country</th>
+                <th>host</th>
+                <th>port</th>
+                <th>ip</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Downtime data will be inserted here -->
+        </tbody>
+    </table>
+    <h2>Downtime Logs</h2>
+    <table id="downtimeTable">
+        <thead>
+            <tr>
+                <th>Host</th>
+                <th>Timestamp</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Downtime data will be inserted here -->
+        </tbody>
+    </table>
+
+    <h2>Uptime Logs</h2>
+    <table id="uptimeTable">
+        <thead>
+            <tr>
+                <th>Host</th>
+                <th>Timestamp</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Uptime data will be inserted here -->
+        </tbody>
+    </table>
+
+    <h2>Ping Results</h2>
+    <table id="pingTable">
+        <thead>
+            <tr>
+                <th>Host</th>
+                <th>Alive</th>
+                <th>Response Times (ms)</th>
+                <th>Timestamp</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Ping results will be inserted here -->
+        </tbody>
+    </table>
+
+    
+
+    <script>
+        // Function to fetch speed test results and create chart
+            const fetchSpeedTestResults = async () => {
+            const response = await fetch('/results');
+            const data = await response.json();
+                console.log(data)
+            // Check if data is not empty
+            if (data.length === 0) {
+                console.error('No speed test results found.');
+                return;
+            }
+            const tbody = document.getElementById('speedtest').getElementsByTagName('tbody')[0];
+
+            data.forEach(log => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = log.speedResults2.download;
+                row.insertCell(1).textContent = log.speedResults2.upload;
+                row.insertCell(2).textContent = log.speedResults2.location;
+                row.insertCell(3).textContent = log.speedResults2.id;
+                row.insertCell(4).textContent = log.speedResults2.name;
+                row.insertCell(5).textContent = log.speedResults2.country;
+                row.insertCell(6).textContent = log.speedResults2.host;
+                row.insertCell(7).textContent = log.speedResults2.port;
+                row.insertCell(8).textContent = log.speedResults2.ip;
+                row.insertCell(9).textContent = log.timestamp;
+            });
+            
+        };
+
+        // Function to fetch downtime logs and populate the table
+        const fetchDowntimeLogs = async () => {
+            const response = await fetch('/downtime');
+            const downtimeData = await response.json();
+            const tbody = document.getElementById('downtimeTable').getElementsByTagName('tbody')[0];
+
+            downtimeData.forEach(log => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = log.host;
+                row.insertCell(1).textContent = log.timestamp;
+                row.insertCell(2).textContent = log.status;
+            });
+        };
+
+        // Function to fetch uptime logs and populate the table
+        const fetchUptimeLogs = async () => {
+            const response = await fetch('/uptime');
+            const uptimeData = await response.json();
+            const tbody = document.getElementById('uptimeTable').getElementsByTagName('tbody')[0];
+
+            uptimeData.forEach(log => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = log.host;
+                row.insertCell(1).textContent = log.timestamp;
+                row.insertCell(2).textContent = log.status;
+            });
+        };
+
+        // Function to fetch ping results and populate the table
+        const fetchPingResults = async () => {
+            const response = await fetch('/results');
+            const data = await response.json();
+            const lastResult = data; 
+            const tbody = document.getElementById('pingTable').getElementsByTagName('tbody')[0];
+            lastResult.forEach(element => {
+                for (const host in element.pingResults) {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = host;
+                row.insertCell(1).textContent = element.pingResults[host].alive ? 'Yes' : 'No';
+                row.insertCell(2).textContent = element.pingResults[host].responseTimes.join(', ');
+                row.insertCell(3).textContent = element.timestamp;
+            }
+            });
+        };
+
+        // Dark mode toggle functionality
+        const toggleModeButton = document.getElementById('toggleMode');
+        toggleModeButton.addEventListener('click', () => {
+            const isDarkMode = document.body.classList.toggle('dark-mode');
+            document.body.classList.toggle('light-mode', !isDarkMode);
+            toggleModeButton.textContent = isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+        });
+
+        // Fetch data on page load
+        fetchSpeedTestResults();
+        fetchDowntimeLogs();
+        fetchUptimeLogs();
+        fetchPingResults();
+    </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+    "port":80,
+    "pingTimeout": 10,
+    "pingAmount": 7,
+    "pingHosts": ["192.168.0.1", "192.168.1.1", "google.com", "yahoo.com","github.com","discord.com","youtube.com"]
+}
