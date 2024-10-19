@@ -6,7 +6,7 @@
     <meta http-equiv="refresh" content="60">
     <title>Speed Test, Uptime and Downtime Results</title>
     <link rel="stylesheet" href="styles.css"> <!-- Link the CSS file -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <h1>Speed Test Results</h1>
@@ -14,46 +14,24 @@
     <form action="logs.html">
         <input type="submit" value="SEE LOGS" />
     </form>
-    
+
+    <label for="chartSelect">Select Chart:</label>
+    <select id="chartSelect">
+        <option value="all">All Charts</option>
+        <option value="speed">Speed Test Results</option>
+        <option value="ping">Ping Results</option>
+    </select>
+
+    <label>
+        <input type="checkbox" id="togglePingLines" checked>
+        Show Ping Lines
+    </label>
+
     <canvas id="myChart" width="400" height="200"></canvas>
-
-    <h2>Downtime Logs</h2>
-    <table id="downtimeTable">
-        <thead>
-            <tr>
-                <th>Host</th>
-                <th>Timestamp</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Downtime data will be inserted here -->
-        </tbody>
-    </table>
-
-    <h2>Uptime Logs</h2>
-    <table id="uptimeTable">
-        <thead>
-            <tr>
-                <th>Host</th>
-                <th>Timestamp</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Uptime data will be inserted here -->
-        </tbody>
-    </table>
+    <canvas id="pingChart" width="400" height="200" style="display: none;"></canvas>
 
     <h2>Ping Results</h2>
     <table id="pingTable">
-        <thead>
-            <tr>
-                <th>Host</th>
-                <th>Alive</th>
-                <th>Response Times (ms)</th>
-            </tr>
-        </thead>
         <tbody>
             <!-- Ping results will be inserted here -->
         </tbody>
@@ -61,11 +39,10 @@
 
     <script>
         // Function to fetch speed test results and create chart
-            const fetchSpeedTestResults = async () => {
+        const fetchSpeedTestResults = async () => {
             const response = await fetch('/results');
             const data = await response.json();
-                console.log(data)
-            // Check if data is not empty
+            console.log(data);
             if (data.length === 0) {
                 console.error('No speed test results found.');
                 return;
@@ -106,50 +83,103 @@
             });
         };
 
-        // Function to fetch downtime logs and populate the table
-        const fetchDowntimeLogs = async () => {
-            const response = await fetch('/downtime');
-            const downtimeData = await response.json();
-            const tbody = document.getElementById('downtimeTable').getElementsByTagName('tbody')[0];
-
-            downtimeData.forEach(log => {
-                const row = tbody.insertRow();
-                row.insertCell(0).textContent = log.host;
-                row.insertCell(1).textContent = log.timestamp;
-                row.insertCell(2).textContent = log.status;
-            });
+        const getRandomColor = (usedColors) => {
+            let color;
+            do {
+                color = `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, 1)`;
+            } while (usedColors.includes(color) || color === 'rgba(0, 0, 0, 1)');
+            return color;
         };
 
-        // Function to fetch uptime logs and populate the table
-        const fetchUptimeLogs = async () => {
-            const response = await fetch('/uptime');
-            const uptimeData = await response.json();
-            const tbody = document.getElementById('uptimeTable').getElementsByTagName('tbody')[0];
-
-            uptimeData.forEach(log => {
-                const row = tbody.insertRow();
-                row.insertCell(0).textContent = log.host;
-                row.insertCell(1).textContent = log.timestamp;
-                row.insertCell(2).textContent = log.status;
-            });
-        };
-
-        // Function to fetch ping results and populate the table
         const fetchPingResults = async () => {
             const response = await fetch('/results');
             const data = await response.json();
-            const lastResult = data[data.length - 1]; // Get the most recent result
-            const tbody = document.getElementById('pingTable').getElementsByTagName('tbody')[0];
 
-            for (const host in lastResult.pingResults) {
-                const row = tbody.insertRow();
-                row.insertCell(0).textContent = host;
-                row.insertCell(1).textContent = lastResult.pingResults[host].alive ? 'Yes' : 'No';
-                row.insertCell(2).textContent = lastResult.pingResults[host].responseTimes.join(', ');
+            if (data.length === 0) {
+                console.error('No ping results found.');
+                return;
             }
+
+            const datasets = [];
+            const responseTimes = {};
+            const usedColors = [];
+
+            data.forEach(result => {
+                const timestamp = result.timestamp;
+                for (const host in result.pingResults) {
+                    const pingData = result.pingResults[host];
+                    if (!responseTimes[host]) {
+                        responseTimes[host] = {
+                            alive: pingData.alive,
+                            times: [],
+                            timestamps: []
+                        };
+                    }
+                    const maxResponseTime = pingData.alive ? 
+                        (pingData.responseTimes.length ? Math.max(...pingData.responseTimes) : null) :
+                        -1;
+                    responseTimes[host].times.push(maxResponseTime);
+                    responseTimes[host].timestamps.push(timestamp);
+                }
+            });
+
+            for (const host in responseTimes) {
+                const color = getRandomColor(usedColors);
+                usedColors.push(color);
+
+                datasets.push({
+                    label: host,
+                    data: responseTimes[host].times,
+                    borderColor: color,
+                    fill: false,
+                    tension: 0.1
+                });
+            }
+
+            const ctx = document.getElementById('pingChart').getContext('2d');
+            const pingChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(result => result.timestamp),
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Ping Response Time (ms)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(tooltipItem) {
+                                    const responseTime = tooltipItem.raw;
+                                    return `${tooltipItem.dataset.label}: ${responseTime !== null ? (responseTime === -1 ? 'offline' : `${responseTime} ms`) : 'offline'}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const offlineDatasets = datasets.map((dataset) => {
+                return {
+                    ...dataset,
+                    pointBackgroundColor: dataset.data.map(value => (value === -1 ? 'black' : dataset.borderColor)),
+                    pointBorderColor: dataset.data.map(value => (value === -1 ? 'black' : dataset.borderColor)),
+                    pointRadius: dataset.data.map(value => (value === -1 ? 5 : 3)),
+                };
+            });
+
+            pingChart.data.datasets = offlineDatasets;
+            pingChart.update();
         };
 
-        // Dark mode toggle functionality
         const toggleModeButton = document.getElementById('toggleMode');
         toggleModeButton.addEventListener('click', () => {
             const isDarkMode = document.body.classList.toggle('dark-mode');
@@ -157,11 +187,55 @@
             toggleModeButton.textContent = isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode';
         });
 
-        // Fetch data on page load
+        const updateChartVisibility = () => {
+            const selectedChart = document.getElementById('chartSelect').value;
+            const speedChart = document.getElementById('myChart');
+            const pingChart = document.getElementById('pingChart');
+
+            if (selectedChart === 'speed') {
+                speedChart.style.display = 'block';
+                pingChart.style.display = 'none';
+            } else if (selectedChart === 'ping') {
+                speedChart.style.display = 'none';
+                pingChart.style.display = 'block';
+            } else {
+                speedChart.style.display = 'block';
+                pingChart.style.display = 'block';
+            }
+
+            // Save the selected chart to localStorage
+            localStorage.setItem('selectedChart', selectedChart);
+        };
+
+        const togglePingLinesCheckbox = document.getElementById('togglePingLines');
+        togglePingLinesCheckbox.addEventListener('change', () => {
+            const pingChart = document.getElementById('pingChart');
+            const isChecked = togglePingLinesCheckbox.checked;
+            pingChart.style.display = isChecked ? 'block' : 'none';
+            
+            // Save checkbox state to localStorage
+            localStorage.setItem('togglePingLines', isChecked);
+        });
+
+        // Restore the last selected chart and checkbox state from localStorage
+        const savedChart = localStorage.getItem('selectedChart');
+        if (savedChart) {
+            document.getElementById('chartSelect').value = savedChart;
+        }
+
+        const savedPingLinesState = localStorage.getItem('togglePingLines');
+        if (savedPingLinesState !== null) {
+            togglePingLinesCheckbox.checked = JSON.parse(savedPingLinesState);
+            // Set visibility based on saved state
+            const pingChart = document.getElementById('pingChart');
+            pingChart.style.display = togglePingLinesCheckbox.checked ? 'block' : 'none';
+        }
+
+        document.getElementById('chartSelect').addEventListener('change', updateChartVisibility);
+
         fetchSpeedTestResults();
-        fetchDowntimeLogs();
-        fetchUptimeLogs();
         fetchPingResults();
+        updateChartVisibility(); 
     </script>
 </body>
 </html>
