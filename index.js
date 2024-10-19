@@ -28,8 +28,8 @@ const performSpeedTest = async () => {
       const result = await speedTest({ maxTime: 5000 });
       // console.log('Raw Speed Test Result:', result); // Log the entire result
       const speedResults = {
-          download: (result.download.bytes / 1e6).toFixed(2),
-          upload: (result.upload.bytes / 1e6).toFixed(2),
+          download: (result.download.bytes / (1024 * 1024)).toFixed(2),
+          upload: (result.upload.bytes / (1024 * 1024)).toFixed(2),
           location: result.server.location,
           id:result.server.id,
           name:result.server.name,
