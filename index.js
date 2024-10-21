@@ -25,7 +25,7 @@ const downtimeFilePath = path.join(__dirname, 'downtime.json');
 // Function to perform speed test
 const performSpeedTest = async () => {
   try {
-      const result = await speedTest({ maxTime: 5000 });
+      const result = await speedTest({ maxTime: 5000, acceptLicense: true });
       // console.log('Raw Speed Test Result:', result); // Log the entire result
       const speedResults = {
           download: (result.download.bytes / (1024 * 1024)).toFixed(2),
